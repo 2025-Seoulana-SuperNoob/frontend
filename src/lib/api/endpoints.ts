@@ -12,9 +12,9 @@ export const API_ENDPOINTS = {
     DETAIL: (id: string) => `/api/resumes/${id}`,
     UPDATE: (id: string) => `/api/resumes/${id}`,
     DELETE: (id: string) => `/api/resumes/${id}`,
-  },
-  FEEDBACK: {
-    CREATE: (resumeId: string) => `/api/resumes/${resumeId}/feedback`,
-    LIST: (resumeId: string) => `/api/resumes/${resumeId}/feedback`,
+    FEEDBACK: {
+      LIST: (id: string) => `/api/resumes/${id}/feedback`,
+      CREATE: (id: string) => `/api/resumes/${id}/feedback`,
+    },
   },
 } as const;

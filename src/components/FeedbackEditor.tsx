@@ -20,9 +20,10 @@ interface FeedbackEditorProps {
     answer: string;
   }[];
   readOnly?: boolean;
+  onSubmit?: (content: string, selectedText: string) => Promise<void>;
 }
 
-export default function FeedbackEditor({ questions, readOnly = false }: FeedbackEditorProps) {
+export default function FeedbackEditor({ questions, readOnly = false, onSubmit }: FeedbackEditorProps) {
   const [comments, setComments] = useState<CommentData[]>([]);
   const [activeComment, setActiveComment] = useState<string | null>(null);
   const [commentContent, setCommentContent] = useState('');
@@ -120,10 +121,16 @@ export default function FeedbackEditor({ questions, readOnly = false }: Feedback
     setActiveComment(null);
   };
 
-  const handleSaveComment = () => {
+  const handleSaveComment = async () => {
     if (activeComment) {
       if (activeComment.startsWith('comment-')) {
         updateComment(activeComment, commentContent);
+        if (onSubmit) {
+          const comment = comments.find(c => c.id === activeComment);
+          if (comment) {
+            await onSubmit(commentContent, comment.quotedText || '');
+          }
+        }
       } else {
         const newComment: CommentData = {
           id: `comment-${Date.now()}`,
@@ -133,6 +140,9 @@ export default function FeedbackEditor({ questions, readOnly = false }: Feedback
           questionId: activeComment
         };
         setComments([...comments, newComment]);
+        if (onSubmit) {
+          await onSubmit(commentContent, '');
+        }
       }
       setActiveComment(null);
       setCommentContent('');
