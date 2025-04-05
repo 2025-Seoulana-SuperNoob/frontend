@@ -32,7 +32,7 @@ export default function Home() {
                 자기소개서 작성하기
               </Link>
               <Link
-                href="/feedback"
+                href="/resume"
                 className="px-8 py-3 bg-white text-blue-600 border-2 border-blue-600 rounded-full hover:bg-blue-50 transition-colors"
               >
                 피드백 하러가기

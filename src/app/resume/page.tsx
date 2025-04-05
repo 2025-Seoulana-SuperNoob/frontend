@@ -57,6 +57,12 @@ export default function ResumeListPage() {
                 >
                   수정
                 </Link>
+                <Link
+                  href={`/resume/${resume.id}/feedback`}
+                  className="px-3 py-1 text-green-600 hover:text-green-800"
+                >
+                  피드백
+                </Link>
               </div>
             </div>
           </div>
