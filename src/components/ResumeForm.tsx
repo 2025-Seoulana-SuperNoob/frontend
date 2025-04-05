@@ -54,7 +54,7 @@ export default function ResumeForm({ onSubmit }: ResumeFormProps) {
 
   const updateQuestion = (index: number, field: 'question' | 'answer', value: string) => {
     const newQuestions = [...questions];
-    if (field === 'answer' && value.length > 2000) {
+    if (field === 'answer' && value.length > 3000) {
       return;
     }
     newQuestions[index] = { ...newQuestions[index], [field]: value };
@@ -177,12 +177,12 @@ export default function ResumeForm({ onSubmit }: ResumeFormProps) {
               onChange={(e) => updateQuestion(index, 'answer', e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px]"
               placeholder="답변을 입력하세요"
-              maxLength={2000}
+              maxLength={3000}
               required
             />
             <div className="text-right">
-              <span className={`text-sm ${q.answer.length >= 2000 ? 'text-red-500' : 'text-gray-500'}`}>
-                {q.answer.length.toLocaleString()}/2,000자
+              <span className={`text-sm ${q.answer.length >= 3000 ? 'text-red-500' : 'text-gray-500'}`}>
+                {q.answer.length.toLocaleString()}/3,000자
               </span>
             </div>
           </div>
