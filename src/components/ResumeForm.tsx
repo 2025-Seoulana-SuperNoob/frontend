@@ -9,7 +9,7 @@ export interface ResumeData {
   title: string;
   company: string;
   year: number;
-  experience: 'newcomer' | 'experienced';
+  experience: '신입' | '경력';
   position: string;
   questions: {
     question: string;
@@ -22,7 +22,7 @@ export default function ResumeForm({ onSubmit }: ResumeFormProps) {
   const [basicInfo, setBasicInfo] = useState({
     company: '',
     year: new Date().getFullYear(),
-    experience: 'newcomer' as const,
+    experience: '신입' as const,
     position: '',
   });
   const [questions, setQuestions] = useState([
@@ -125,8 +125,8 @@ export default function ResumeForm({ onSubmit }: ResumeFormProps) {
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
             >
-              <option value="newcomer">신입</option>
-              <option value="experienced">경력</option>
+              <option value="신입">신입</option>
+              <option value="경력">경력</option>
             </select>
           </div>
           <div>
