@@ -8,6 +8,7 @@ export default function MyPage() {
   const { publicKey, disconnect } = useWallet();
   const router = useRouter();
   const [nickname, setNickname] = useState('');
+  const [copied, setCopied] = useState(false);
 
   const handleNicknameChange = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,6 +30,18 @@ export default function MyPage() {
     }
   };
 
+  const copyAddress = () => {
+    if (publicKey) {
+      navigator.clipboard.writeText(publicKey.toString());
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const formatAddress = (address: string) => {
+    return `${address.slice(0, 4)}...${address.slice(-4)}`;
+  };
+
   return (
     <div className="p-4">
       <h1 className="text-2xl font-bold mb-6">마이페이지</h1>
@@ -40,8 +53,20 @@ export default function MyPage() {
           <label className="block text-gray-700 text-sm font-bold mb-2">
             지갑 주소
           </label>
-          <div className="bg-gray-100 p-3 rounded">
-            {publicKey ? publicKey.toString() : '지갑이 연결되지 않았습니다.'}
+          <div className="flex items-center gap-2">
+            <div className="flex-1 bg-gray-100 p-3 rounded overflow-hidden">
+              <span className="break-all">
+                {publicKey ? formatAddress(publicKey.toString()) : '지갑이 연결되지 않았습니다.'}
+              </span>
+            </div>
+            {publicKey && (
+              <button
+                onClick={copyAddress}
+                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+              >
+                {copied ? '복사됨' : '복사'}
+              </button>
+            )}
           </div>
         </div>
 
