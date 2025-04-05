@@ -1,9 +1,6 @@
 "use client";
 
-import { useRef, useState, useEffect } from "react";
-import { BubbleMenu, EditorContent, useEditor } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
-import Comment from "@sereneinserenade/tiptap-comment-extension";
+import { useRef, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 
 interface CommentData {
@@ -12,7 +9,6 @@ interface CommentData {
   author: string;
   createdAt: Date;
   questionId: string;
-  selections: number[];
 }
 
 interface FeedbackEditorProps {
@@ -21,85 +17,7 @@ interface FeedbackEditorProps {
     answer: string;
   }[];
   readOnly?: boolean;
-  onSubmit?: (content: string, selections: number[]) => Promise<void>;
-}
-
-interface QuestionEditorProps {
-  content: string;
-  readOnly: boolean;
-  onSelectionUpdate: (selection: { from: number; to: number }) => void;
-}
-
-function QuestionEditor({ content, readOnly, onSelectionUpdate }: QuestionEditorProps) {
-  const editor = useEditor({
-    extensions: [
-      StarterKit.configure({
-        paragraph: {
-          HTMLAttributes: {
-            class: 'prose prose-sm sm:prose lg:prose-lg xl:prose-2xl mx-auto',
-          },
-        },
-      }),
-      Comment.configure({
-        HTMLAttributes: {
-          class: "tiptap-comment",
-          style: "background-color: #fff3cd; border-bottom: 2px solid #ffa500;",
-        },
-      }),
-    ],
-    content: content,
-    editable: !readOnly,
-    onSelectionUpdate: ({ editor }) => {
-      const { from, to } = editor.state.selection;
-      onSelectionUpdate({ from, to });
-    },
-  });
-
-  useEffect(() => {
-    if (editor) {
-      editor.commands.setContent(content);
-    }
-  }, [editor, content]);
-
-  return (
-    <div className="prose max-w-none relative">
-      <EditorContent editor={editor} className="min-h-[200px] p-4 border rounded-lg" />
-      {editor && !readOnly && (
-        <BubbleMenu
-          editor={editor}
-          className="bg-white border rounded-lg shadow-lg p-1 flex items-center gap-1"
-          tippyOptions={{ duration: 100 }}
-        >
-          <button
-            onClick={() => {
-              const { from, to } = editor.state.selection;
-              if (from !== to) {
-                onSelectionUpdate({ from, to });
-              }
-            }}
-            className="p-2 hover:bg-gray-100 rounded-md"
-            title="댓글 추가"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-              <line x1="12" y1="8" x2="12" y2="16" />
-              <line x1="8" y1="12" x2="16" y2="12" />
-            </svg>
-          </button>
-        </BubbleMenu>
-      )}
-    </div>
-  );
+  onSubmit?: (content: string, index: number, walletAddress: string) => Promise<void>;
 }
 
 export default function FeedbackEditor({
@@ -111,23 +29,17 @@ export default function FeedbackEditor({
   const [comments, setComments] = useState<CommentData[]>([]);
   const [activeComment, setActiveComment] = useState<string | null>(null);
   const [commentContent, setCommentContent] = useState("");
-  const [currentSelection, setCurrentSelection] = useState<{ from: number; to: number } | null>(null);
   const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);
+  const [error, setError] = useState<string | null>(null);
   const commentsSectionRef = useRef<HTMLDivElement>(null);
 
   const addComment = (questionId: string) => {
-    if (!currentSelection) {
-      alert("텍스트를 선택해주세요.");
-      return;
-    }
-
     const newComment: CommentData = {
       id: `comment-${Date.now()}`,
       content: "",
       author: publicKey?.toBase58() || "Unknown",
       createdAt: new Date(),
       questionId,
-      selections: [currentSelection.from, currentSelection.to]
     };
 
     setComments([...comments, newComment]);
@@ -160,31 +72,42 @@ export default function FeedbackEditor({
   };
 
   const handleSaveComment = async () => {
-    if (activeComment) {
-      if (activeComment.startsWith('comment-')) {
-        updateComment(activeComment, commentContent);
-        if (onSubmit) {
-          const comment = comments.find(c => c.id === activeComment);
-          if (comment) {
-            await onSubmit(commentContent, comment.selections);
+    if (activeComment && publicKey) {
+      try {
+        setError(null);
+        if (activeComment.startsWith('comment-')) {
+          updateComment(activeComment, commentContent);
+          if (onSubmit) {
+            await onSubmit(
+              commentContent,
+              activeQuestionIndex,
+              publicKey.toBase58()
+            );
+          }
+        } else {
+          const newComment: CommentData = {
+            id: `comment-${Date.now()}`,
+            content: commentContent,
+            author: publicKey.toBase58(),
+            createdAt: new Date(),
+            questionId: activeComment,
+          };
+          setComments([...comments, newComment]);
+          if (onSubmit) {
+            await onSubmit(
+              commentContent,
+              activeQuestionIndex,
+              publicKey.toBase58()
+            );
           }
         }
-      } else {
-        const newComment: CommentData = {
-          id: `comment-${Date.now()}`,
-          content: commentContent,
-          author: publicKey?.toBase58() || "Unknown",
-          createdAt: new Date(),
-          questionId: activeComment,
-          selections: currentSelection ? [currentSelection.from, currentSelection.to] : [0, 0]
-        };
-        setComments([...comments, newComment]);
-        if (onSubmit) {
-          await onSubmit(commentContent, newComment.selections);
-        }
+        setActiveComment(null);
+        setCommentContent('');
+      } catch {
+        setError("피드백 저장에 실패했습니다. 다시 시도해주세요.");
       }
-      setActiveComment(null);
-      setCommentContent('');
+    } else if (!publicKey) {
+      setError("지갑 연결이 필요합니다.");
     }
   };
 
@@ -218,18 +141,13 @@ export default function FeedbackEditor({
           {questions[activeQuestionIndex].question}
         </p>
         <div className="space-y-4">
-          {questions.map((question, index) => (
-            <div
-              key={index}
-              className={`${activeQuestionIndex === index ? '' : 'hidden'}`}
-            >
-              <QuestionEditor
-                content={question.answer}
-                readOnly={readOnly}
-                onSelectionUpdate={setCurrentSelection}
-              />
-            </div>
-          ))}
+          <div>
+            <textarea
+              value={questions[activeQuestionIndex].answer}
+              readOnly
+              className="w-full min-h-[200px] p-4 border rounded-lg resize-none bg-gray-50"
+            />
+          </div>
         </div>
       </div>
 
@@ -238,7 +156,7 @@ export default function FeedbackEditor({
           <h3 className="text-lg font-semibold">피드백 목록</h3>
           {!readOnly && (
             <button
-              onClick={() => addComment(`question-${activeComment?.split('-')[1] || 0}`)}
+              onClick={() => addComment(`question-${activeQuestionIndex}`)}
               className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
             >
               피드백 추가
@@ -246,73 +164,75 @@ export default function FeedbackEditor({
           )}
         </div>
         <div className="space-y-4">
-          {getCommentsForQuestion(`question-${activeComment?.split('-')[1] || 0}`).length ? (
-            getCommentsForQuestion(`question-${activeComment?.split('-')[1] || 0}`).map(
+          {getCommentsForQuestion(`question-${activeQuestionIndex}`).length ? (
+            getCommentsForQuestion(`question-${activeQuestionIndex}`).map(
               (comment) => (
                 <div
                   key={comment.id}
-                  className="border-l-4 border-blue-500 pl-4"
+                  className="border-l-4 border-blue-500 pl-4 bg-white rounded-lg shadow-sm p-4"
                 >
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <p className="font-medium text-blue-600">
-                        {comment.author}
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        {comment.createdAt.toLocaleDateString()}
-                      </p>
-                    </div>
-                    {!readOnly && (
-                      <div className="space-x-2">
-                        <button
-                          onClick={() => handleEditComment(comment.id)}
-                          className="text-gray-600 hover:text-gray-800"
-                        >
-                          수정
-                        </button>
-                        <button
-                          onClick={() => handleDeleteComment(comment.id)}
-                          className="text-red-600 hover:text-red-800"
-                        >
-                          삭제
-                        </button>
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className="font-medium text-blue-600 truncate max-w-[150px]" title={comment.author}>
+                          {comment.author.length > 8 ? `${comment.author.slice(0, 8)}...` : comment.author}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          {comment.createdAt.toLocaleDateString()}
+                        </p>
                       </div>
+                      {!readOnly && activeComment !== comment.id && (
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleEditComment(comment.id)}
+                            className="text-gray-600 hover:text-gray-800 text-sm px-2 py-1 rounded-md hover:bg-gray-100"
+                          >
+                            수정
+                          </button>
+                          <button
+                            onClick={() => handleDeleteComment(comment.id)}
+                            className="text-red-600 hover:text-red-800 text-sm px-2 py-1 rounded-md hover:bg-red-50"
+                          >
+                            삭제
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    {activeComment === comment.id ? (
+                      <div className="mt-2">
+                        {error && (
+                          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+                            <p className="text-red-600 text-sm">{error}</p>
+                          </div>
+                        )}
+                        <textarea
+                          value={commentContent}
+                          onChange={(e) => setCommentContent(e.target.value)}
+                          className="w-full h-32 p-2 border rounded-md mb-2"
+                          placeholder="피드백을 입력하세요..."
+                        />
+                        <div className="flex justify-end space-x-2">
+                          <button
+                            onClick={() => {
+                              setActiveComment(null);
+                              setError(null);
+                            }}
+                            className="px-3 py-1 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-md hover:bg-gray-50"
+                          >
+                            취소
+                          </button>
+                          <button
+                            onClick={handleSaveComment}
+                            className="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                          >
+                            저장
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-gray-700 mt-2">{comment.content}</p>
                     )}
                   </div>
-                  {comment.selections.length > 0 && (
-                    <blockquote className="border-l-4 border-gray-300 pl-4 my-2 italic text-gray-600">
-                      {questions[parseInt(comment.questionId.split('-')[1])]?.answer.slice(
-                        comment.selections[0],
-                        comment.selections[1]
-                      )}
-                    </blockquote>
-                  )}
-                  {activeComment === comment.id ? (
-                    <div className="mt-2">
-                      <textarea
-                        value={commentContent}
-                        onChange={(e) => setCommentContent(e.target.value)}
-                        className="w-full h-32 p-2 border rounded-md mb-2"
-                        placeholder="피드백을 입력하세요..."
-                      />
-                      <div className="flex justify-end space-x-2">
-                        <button
-                          onClick={() => setActiveComment(null)}
-                          className="px-3 py-1 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-md hover:bg-gray-50"
-                        >
-                          취소
-                        </button>
-                        <button
-                          onClick={handleSaveComment}
-                          className="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                        >
-                          저장
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="text-gray-700">{comment.content}</p>
-                  )}
                 </div>
               )
             )

@@ -24,10 +24,7 @@ interface Feedback {
   content: string;
   walletAddress: string;
   createdAt: string;
-  selections: {
-    from: number;
-    to: number;
-  }[];
+  index: number;
 }
 
 export default function FeedbackPage() {
@@ -56,13 +53,13 @@ export default function FeedbackPage() {
     fetchData();
   }, [id]);
 
-  const handleSubmitFeedback = async (content: string, selections: number[]) => {
+  const handleSubmitFeedback = async (content: string, index: number) => {
     try {
       const response = await api.post<Feedback>(
         API_ENDPOINTS.RESUME.FEEDBACK.CREATE(id as string),
         {
           content,
-          selections,
+          index,
           walletAddress: publicKey?.toBase58() || "Unknown",
         }
       );
