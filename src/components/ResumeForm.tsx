@@ -1,5 +1,9 @@
 import { useState } from 'react';
 import Link from 'next/link';
+import { useWallet } from "@solana/wallet-adapter-react";
+import { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } from "@solana/web3.js";
+import api from "@/lib/api/axios";
+import { API_ENDPOINTS } from "@/lib/api/endpoints";
 
 interface ResumeFormProps {
   onSubmit: (data: ResumeData) => void;
@@ -17,7 +21,11 @@ export interface ResumeData {
   }[];
 }
 
+const DEPOSIT_AMOUNT = 0.000003; // 0.000003 SOL
+const PROGRAM_ID = new PublicKey("B1GRHGLqpyhw2QzTBk9Fnd8t69CYNuphKpj2YfXZxxwe"); // 스마트 컨트랙트 주소
+
 export default function ResumeForm({ onSubmit }: ResumeFormProps) {
+  const { publicKey, signTransaction } = useWallet();
   const [title, setTitle] = useState('');
   const [basicInfo, setBasicInfo] = useState({
     company: '',
@@ -28,14 +36,73 @@ export default function ResumeForm({ onSubmit }: ResumeFormProps) {
   const [questions, setQuestions] = useState([
     { question: '', answer: '' },
   ]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit({
-      title,
-      ...basicInfo,
-      questions
-    });
+    if (!publicKey) {
+      setError("지갑 연결이 필요합니다.");
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      setError(null);
+
+      // 1. 트랜잭션 생성
+      const connection = new Connection("https://api.devnet.solana.com");
+      const { blockhash } = await connection.getLatestBlockhash();
+      const transaction = new Transaction().add(
+        SystemProgram.transfer({
+          fromPubkey: publicKey,
+          toPubkey: PROGRAM_ID,
+          lamports: DEPOSIT_AMOUNT * LAMPORTS_PER_SOL,
+        })
+      );
+      transaction.recentBlockhash = blockhash;
+      transaction.feePayer = publicKey;
+
+      // 2. 트랜잭션 서명
+      const signedTx = await signTransaction(transaction);
+      const txHash = await connection.sendRawTransaction(signedTx.serialize());
+
+      // 3. 트랜잭션 확인 대기
+      await connection.confirmTransaction(txHash);
+
+      // 4. 백엔드에 자기소개서와 트랜잭션 정보 전송
+      const response = await api.post(API_ENDPOINTS.RESUME.CREATE, {
+        title,
+        ...basicInfo,
+        questions,
+        walletAddress: publicKey.toBase58(),
+        depositAmount: DEPOSIT_AMOUNT,
+        depositTransaction: txHash,
+      });
+
+      if (response.data) {
+        // 성공 처리
+        onSubmit({
+          title,
+          ...basicInfo,
+          questions
+        });
+        setTitle('');
+        setBasicInfo({
+          company: '',
+          year: new Date().getFullYear(),
+          experience: '신입' as const,
+          position: '',
+        });
+        setQuestions([{ question: '', answer: '' }]);
+        alert("자기소개서가 성공적으로 등록되었습니다.");
+      }
+    } catch (err) {
+      console.error("Error submitting resume:", err);
+      setError("자기소개서 등록에 실패했습니다. 다시 시도해주세요.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleBasicInfoChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -64,6 +131,12 @@ export default function ResumeForm({ onSubmit }: ResumeFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="w-full space-y-6">
+      {error && (
+        <div className="p-4 bg-red-50 text-red-600 rounded-md">
+          {error}
+        </div>
+      )}
+
       <div>
         <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
           자기소개서 제목
@@ -190,6 +263,12 @@ export default function ResumeForm({ onSubmit }: ResumeFormProps) {
         ))}
       </div>
 
+      <div className="bg-yellow-50 p-4 rounded-md">
+        <p className="text-yellow-700">
+          자기소개서를 등록하기 위해서는 {DEPOSIT_AMOUNT} SOL의 예치금이 필요합니다.
+        </p>
+      </div>
+
       <div className="flex justify-between">
         <button
           type="button"
@@ -207,9 +286,10 @@ export default function ResumeForm({ onSubmit }: ResumeFormProps) {
           </Link>
           <button
             type="submit"
-            className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            disabled={isSubmitting || !publicKey}
+            className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
           >
-            제출하기
+            {isSubmitting ? "등록 중..." : "자기소개서 등록"}
           </button>
         </div>
       </div>

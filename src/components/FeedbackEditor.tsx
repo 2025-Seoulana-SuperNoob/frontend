@@ -10,7 +10,6 @@ interface CommentData {
   content: string;
   walletAddress: string;
   createdAt: Date;
-  index: number;
 }
 
 interface FeedbackResponse {
@@ -18,7 +17,6 @@ interface FeedbackResponse {
   content: string;
   walletAddress: string;
   createdAt: string;
-  index: number;
 }
 
 interface FeedbackEditorProps {
@@ -68,9 +66,15 @@ export default function FeedbackEditor({
     fetchComments();
   }, [resumeId, activeQuestionIndex]);
 
-  const addComment = (index: number) => {
+  const addComment = () => {
     if (!publicKey) {
       setError("지갑 연결이 필요합니다.");
+      return;
+    }
+
+    // 이미 피드백이 있는지 확인
+    if (comments.length > 0) {
+      setError("이미 피드백을 작성하셨습니다.");
       return;
     }
 
@@ -79,7 +83,6 @@ export default function FeedbackEditor({
       content: "",
       walletAddress: publicKey.toBase58(),
       createdAt: new Date(),
-      index,
     };
 
     setComments([...comments, newComment]);
@@ -106,7 +109,6 @@ export default function FeedbackEditor({
         setError(null);
         const payload = {
           content: commentContent,
-          index: activeQuestionIndex,
           walletAddress: publicKey.toBase58()
         };
 
@@ -120,7 +122,6 @@ export default function FeedbackEditor({
           content: commentContent,
           walletAddress: publicKey.toBase58(),
           createdAt: new Date(),
-          index: activeQuestionIndex,
         };
 
         setComments([...comments, newComment]);
@@ -134,10 +135,6 @@ export default function FeedbackEditor({
     } else if (!publicKey) {
       setError("지갑 연결이 필요합니다.");
     }
-  };
-
-  const getCommentsForQuestion = (index: number) => {
-    return comments.filter((comment) => comment.index === index);
   };
 
   return (
@@ -178,13 +175,13 @@ export default function FeedbackEditor({
 
       <div className="border rounded-lg p-4 bg-white" ref={commentsSectionRef}>
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold">피드백 목록</h3>
-          {!readOnly && (
+          <h3 className="text-lg font-semibold">피드백</h3>
+          {!readOnly && comments.length === 0 && (
             <button
-              onClick={() => addComment(activeQuestionIndex)}
+              onClick={addComment}
               className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
             >
-              피드백 추가
+              피드백 작성
             </button>
           )}
         </div>
@@ -193,78 +190,76 @@ export default function FeedbackEditor({
             <div key="loading" className="text-center text-gray-500 py-4">
               피드백을 불러오는 중...
             </div>
-          ) : getCommentsForQuestion(activeQuestionIndex).length ? (
-            getCommentsForQuestion(activeQuestionIndex).map(
-              (comment) => (
-                <div
-                  key={comment.id}
-                  className="border-l-4 border-blue-500 pl-4 bg-white rounded-lg shadow-sm p-4"
-                >
-                  <div className="flex flex-col gap-2">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <p className="font-medium text-blue-600 truncate max-w-[150px]" title={comment.walletAddress}>
-                          {comment.walletAddress.length > 8 ? `${comment.walletAddress.slice(0, 8)}...` : comment.walletAddress}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          {comment.createdAt.toLocaleDateString()}
-                        </p>
-                      </div>
-                      {!readOnly && activeComment !== comment.id && (
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => handleEditComment(comment.id)}
-                            className="text-gray-600 hover:text-gray-800 text-sm px-2 py-1 rounded-md hover:bg-gray-100"
-                          >
-                            수정
-                          </button>
-                          <button
-                            onClick={() => handleDeleteComment(comment.id)}
-                            className="text-red-600 hover:text-red-800 text-sm px-2 py-1 rounded-md hover:bg-red-50"
-                          >
-                            삭제
-                          </button>
-                        </div>
-                      )}
+          ) : comments.length > 0 ? (
+            comments.map((comment) => (
+              <div
+                key={comment.id}
+                className="border-l-4 border-blue-500 pl-4 bg-white rounded-lg shadow-sm p-4"
+              >
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="font-medium text-blue-600 truncate max-w-[150px]" title={comment.walletAddress}>
+                        {comment.walletAddress.length > 8 ? `${comment.walletAddress.slice(0, 8)}...` : comment.walletAddress}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {comment.createdAt.toLocaleDateString()}
+                      </p>
                     </div>
-                    {activeComment === comment.id ? (
-                      <div className="mt-2">
-                        {error && (
-                          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
-                            <p className="text-red-600 text-sm">{error}</p>
-                          </div>
-                        )}
-                        <textarea
-                          value={commentContent}
-                          onChange={(e) => setCommentContent(e.target.value)}
-                          className="w-full h-32 p-2 border rounded-md mb-2"
-                          placeholder="피드백을 입력하세요..."
-                        />
-                        <div className="flex justify-end space-x-2">
-                          <button
-                            onClick={() => {
-                              setActiveComment(null);
-                              setError(null);
-                            }}
-                            className="px-3 py-1 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-md hover:bg-gray-50"
-                          >
-                            취소
-                          </button>
-                          <button
-                            onClick={handleSaveComment}
-                            className="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                          >
-                            저장
-                          </button>
-                        </div>
+                    {!readOnly && activeComment !== comment.id && (
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleEditComment(comment.id)}
+                          className="text-gray-600 hover:text-gray-800 text-sm px-2 py-1 rounded-md hover:bg-gray-100"
+                        >
+                          수정
+                        </button>
+                        <button
+                          onClick={() => handleDeleteComment(comment.id)}
+                          className="text-red-600 hover:text-red-800 text-sm px-2 py-1 rounded-md hover:bg-red-50"
+                        >
+                          삭제
+                        </button>
                       </div>
-                    ) : (
-                      <p className="text-gray-700 mt-2">{comment.content}</p>
                     )}
                   </div>
+                  {activeComment === comment.id ? (
+                    <div className="mt-2">
+                      {error && (
+                        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+                          <p className="text-red-600 text-sm">{error}</p>
+                        </div>
+                      )}
+                      <textarea
+                        value={commentContent}
+                        onChange={(e) => setCommentContent(e.target.value)}
+                        className="w-full h-32 p-2 border rounded-md mb-2"
+                        placeholder="피드백을 입력하세요..."
+                      />
+                      <div className="flex justify-end space-x-2">
+                        <button
+                          onClick={() => {
+                            setActiveComment(null);
+                            setError(null);
+                          }}
+                          className="px-3 py-1 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-md hover:bg-gray-50"
+                        >
+                          취소
+                        </button>
+                        <button
+                          onClick={handleSaveComment}
+                          className="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                        >
+                          저장
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-gray-700 mt-2">{comment.content}</p>
+                  )}
                 </div>
-              )
-            )
+              </div>
+            ))
           ) : (
             <div key="no-comments" className="text-center text-gray-500 py-4">
               아직 작성된 피드백이 없습니다.
