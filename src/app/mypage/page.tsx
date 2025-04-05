@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import api from '@/lib/api/axios';
 import { API_ENDPOINTS } from '@/lib/api/endpoints';
-import { Skeleton } from '@/components/Skeleton';
+import Skeleton from '@/components/Skeleton';
 
 interface UserInfo {
   walletAddress: string;
