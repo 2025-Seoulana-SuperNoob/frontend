@@ -62,7 +62,7 @@ export default function MyPage() {
             {publicKey && (
               <button
                 onClick={copyAddress}
-                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline whitespace-nowrap min-w-[60px]"
               >
                 {copied ? '복사됨' : '복사'}
               </button>
@@ -85,7 +85,7 @@ export default function MyPage() {
               />
               <button
                 type="submit"
-                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline whitespace-nowrap min-w-[60px]"
               >
                 변경
               </button>
