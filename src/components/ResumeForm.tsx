@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Link from 'next/link';
 
 interface ResumeFormProps {
   onSubmit: (data: ResumeData) => void;
@@ -197,12 +198,20 @@ export default function ResumeForm({ onSubmit }: ResumeFormProps) {
         >
           + 문항 추가
         </button>
-        <button
-          type="submit"
-          className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          제출하기
-        </button>
+        <div className="flex gap-2">
+          <Link
+            href="/"
+            className="px-6 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500"
+          >
+            메인으로
+          </Link>
+          <button
+            type="submit"
+            className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            제출하기
+          </button>
+        </div>
       </div>
     </form>
   );
