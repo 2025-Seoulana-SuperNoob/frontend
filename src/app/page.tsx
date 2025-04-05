@@ -25,7 +25,7 @@ export default function Home() {
             함께 성장하는 플랫폼
           </p>
           <div className="flex justify-center">
-            <WalletMultiButton />
+            <WalletMultiButton style={{}} />
           </div>
         </div>
 

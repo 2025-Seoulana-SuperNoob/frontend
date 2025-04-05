@@ -97,7 +97,7 @@ export default function MyPage() {
         </form>
 
         <div className="space-y-4">
-          <WalletMultiButton />
+          <WalletMultiButton style={{}} />
 
           <button
             onClick={handleDeleteAccount}
