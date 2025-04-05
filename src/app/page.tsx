@@ -1,9 +1,34 @@
 'use client';
 
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
+import { useWallet } from '@solana/wallet-adapter-react';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 import Image from 'next/image';
+import api from '@/lib/api/axios';
+import { API_ENDPOINTS } from '@/lib/api/endpoints';
 
 export default function Home() {
+  const { publicKey } = useWallet();
+  const router = useRouter();
+
+  useEffect(() => {
+    const handleSignup = async () => {
+      if (publicKey) {
+        try {
+          await api.post(API_ENDPOINTS.AUTH.SIGNUP, {
+            walletAddress: publicKey.toString(),
+          });
+          router.push('/resume');
+        } catch (error) {
+          console.error('Error during signup:', error);
+        }
+      }
+    };
+
+    handleSignup();
+  }, [publicKey, router]);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="max-w-[480px] mx-auto px-4 py-12">
