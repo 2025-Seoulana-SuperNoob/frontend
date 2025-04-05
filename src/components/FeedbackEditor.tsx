@@ -8,16 +8,21 @@ interface CommentData {
   content: string;
   author: string;
   createdAt: Date;
+  questionId: string;
 }
 
 interface FeedbackEditorProps {
-  content: string;
+  questions: {
+    question: string;
+    answer: string;
+  }[];
   readOnly?: boolean;
 }
 
-export default function FeedbackEditor({ content, readOnly = false }: FeedbackEditorProps) {
+export default function FeedbackEditor({ questions, readOnly = false }: FeedbackEditorProps) {
   const [comments, setComments] = useState<CommentData[]>([]);
   const [activeCommentId, setActiveCommentId] = useState<string | null>(null);
+  const [activeQuestionIndex, setActiveQuestionIndex] = useState<number | null>(null);
   const commentsSectionRef = useRef<HTMLDivElement | null>(null);
 
   const focusCommentWithActiveId = (id: string) => {
@@ -39,24 +44,32 @@ export default function FeedbackEditor({ content, readOnly = false }: FeedbackEd
     focusCommentWithActiveId(activeCommentId);
   }, [activeCommentId]);
 
-  const editor = useEditor({
-    extensions: [
-      StarterKit,
-      Comment.configure({
-        HTMLAttributes: {
-          class: 'tiptap-comment'
-        },
-        onCommentActivated: (commentId) => {
-          setActiveCommentId(commentId);
-          if (commentId) setTimeout(() => focusCommentWithActiveId(commentId));
-        },
-      }),
-    ],
-    content,
-    editable: !readOnly,
-  });
+  const createEditor = (content: string, questionId: string) => {
+    return useEditor({
+      extensions: [
+        StarterKit,
+        Comment.configure({
+          HTMLAttributes: {
+            class: 'tiptap-comment'
+          },
+          onCommentActivated: (commentId) => {
+            setActiveCommentId(commentId);
+            setActiveQuestionIndex(parseInt(questionId.split('-')[1]));
+            if (commentId) setTimeout(() => focusCommentWithActiveId(commentId));
+          },
+        }),
+      ],
+      content,
+      editable: !readOnly,
+    });
+  };
 
-  const addComment = () => {
+  const editors = questions.map((q, index) =>
+    createEditor(q.answer, `question-${index}`)
+  );
+
+  const addComment = (questionId: string) => {
+    const editor = editors[parseInt(questionId.split('-')[1])];
     if (!editor) return;
 
     const { from, to } = editor.state.selection;
@@ -69,7 +82,8 @@ export default function FeedbackEditor({ content, readOnly = false }: FeedbackEd
       id: `comment-${Date.now()}`,
       content: '',
       author: 'Current User', // TODO: Solana 지갑 주소로 변경
-      createdAt: new Date()
+      createdAt: new Date(),
+      questionId
     };
 
     setComments([...comments, newComment]);
@@ -88,98 +102,118 @@ export default function FeedbackEditor({ content, readOnly = false }: FeedbackEd
 
   const saveComment = () => {
     setActiveCommentId(null);
-    editor?.commands.focus();
+    setActiveQuestionIndex(null);
+    editors.forEach(editor => editor?.commands.focus());
+  };
+
+  const getCommentsForQuestion = (questionId: string) => {
+    return comments.filter(comment => comment.questionId === questionId);
   };
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="w-full prose max-w-none">
-        <div className="border rounded-lg p-4 bg-white">
-          <h3 className="text-lg font-semibold mb-4">자기소개서 내용</h3>
-          <EditorContent editor={editor} className="min-h-[400px]" />
-        </div>
-      </div>
+      {questions.map((q, index) => (
+        <div key={index} className="w-full">
+          <div className="border rounded-lg p-4 bg-white mb-4">
+            <h3 className="text-lg font-semibold mb-2">문항 {index + 1}</h3>
+            <p className="text-gray-700 mb-4">{q.question}</p>
+            <div className="prose max-w-none">
+              <EditorContent editor={editors[index]} className="min-h-[200px]" />
+            </div>
+          </div>
 
-      <div className="w-full" ref={commentsSectionRef}>
-        <div className="border rounded-lg p-4 bg-white">
-          <h3 className="text-lg font-semibold mb-4">댓글 목록</h3>
-          <div className="space-y-4">
-            {comments.length ? (
-              comments.map((comment) => (
-                <div
-                  key={comment.id}
-                  className={`p-3 rounded-lg border ${
-                    activeCommentId === comment.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
-                  }`}
+          <div className="border rounded-lg p-4 bg-white" ref={index === 0 ? commentsSectionRef : null}>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">댓글 목록</h3>
+              {!readOnly && (
+                <button
+                  onClick={() => addComment(`question-${index}`)}
+                  className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
                 >
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <span className="text-sm font-medium text-gray-700">{comment.author}</span>
-                      <span className="text-xs text-gray-500 ml-2">
-                        {comment.createdAt.toLocaleDateString()}
-                      </span>
-                    </div>
-                    {!readOnly && (
-                      <button
-                        onClick={() => {
-                          editor?.commands.unsetComment(comment.id);
-                          setComments(comments.filter(c => c.id !== comment.id));
-                        }}
-                        className="text-red-500 hover:text-red-700 text-sm"
-                      >
-                        삭제
-                      </button>
-                    )}
-                  </div>
-                  {!readOnly ? (
-                    <>
-                      <textarea
-                        id={comment.id}
-                        value={comment.content}
-                        onChange={(e) => updateComment(comment.id, e.target.value)}
-                        className="w-full p-2 border rounded-md text-sm"
-                        placeholder="댓글을 입력하세요"
-                        rows={3}
-                        disabled={comment.id !== activeCommentId}
-                      />
-                      {activeCommentId === comment.id && (
+                  댓글 추가
+                </button>
+              )}
+            </div>
+            <div className="space-y-4">
+              {getCommentsForQuestion(`question-${index}`).length ? (
+                getCommentsForQuestion(`question-${index}`).map((comment) => (
+                  <div
+                    key={comment.id}
+                    className={`p-3 rounded-lg border ${
+                      activeCommentId === comment.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
+                    }`}
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <span className="text-sm font-medium text-gray-700">{comment.author}</span>
+                        <span className="text-xs text-gray-500 ml-2">
+                          {comment.createdAt.toLocaleDateString()}
+                        </span>
+                      </div>
+                      {!readOnly && (
                         <button
-                          onClick={saveComment}
-                          className="mt-2 px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
+                          onClick={() => {
+                            editors[index]?.commands.unsetComment(comment.id);
+                            setComments(comments.filter(c => c.id !== comment.id));
+                          }}
+                          className="text-red-500 hover:text-red-700 text-sm"
                         >
-                          저장
+                          삭제
                         </button>
                       )}
-                    </>
-                  ) : (
-                    <p className="text-sm text-gray-600">{comment.content}</p>
-                  )}
+                    </div>
+                    {!readOnly ? (
+                      <>
+                        <textarea
+                          id={comment.id}
+                          value={comment.content}
+                          onChange={(e) => updateComment(comment.id, e.target.value)}
+                          className="w-full p-2 border rounded-md text-sm"
+                          placeholder="댓글을 입력하세요"
+                          rows={3}
+                          disabled={comment.id !== activeCommentId}
+                        />
+                        {activeCommentId === comment.id && (
+                          <button
+                            onClick={saveComment}
+                            className="mt-2 px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
+                          >
+                            저장
+                          </button>
+                        )}
+                      </>
+                    ) : (
+                      <p className="text-sm text-gray-600">{comment.content}</p>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <div className="text-center text-gray-500 py-4">
+                  아직 작성된 댓글이 없습니다.
                 </div>
-              ))
-            ) : (
-              <div className="text-center text-gray-500 py-4">
-                아직 작성된 댓글이 없습니다.
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      ))}
 
-      {editor && !readOnly && (
-        <BubbleMenu editor={editor} className="bg-white border rounded-lg shadow-lg p-1">
-          <button
-            onClick={addComment}
-            className="p-2 hover:bg-gray-100 rounded-md"
-            title="댓글 추가"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-              <line x1="12" y1="8" x2="12" y2="16" />
-              <line x1="8" y1="12" x2="16" y2="12" />
-            </svg>
-          </button>
-        </BubbleMenu>
-      )}
+      {editors.map((editor, index) => (
+        editor && !readOnly && (
+          <BubbleMenu key={index} editor={editor} className="bg-white border rounded-lg shadow-lg p-1">
+            <button
+              onClick={() => addComment(`question-${index}`)}
+              className="p-2 hover:bg-gray-100 rounded-md"
+              title="댓글 추가"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                <line x1="12" y1="8" x2="12" y2="16" />
+                <line x1="8" y1="12" x2="16" y2="12" />
+              </svg>
+            </button>
+          </BubbleMenu>
+        )
+      ))}
     </div>
   );
 }

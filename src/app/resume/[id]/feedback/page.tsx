@@ -11,28 +11,23 @@ const SAMPLE_RESUME = {
   year: 2024,
   experience: 'newcomer',
   position: '프론트엔드 개발자',
-  content: `
-<h2>1. 지원 동기</h2>
-<p>
-저는 어릴 때부터 기술에 대한 호기심이 많았습니다. 특히 웹 개발 분야에서 사용자 경험을 개선하는 것에 큰 관심을 가지고 있었습니다.
-</p>
-
-<h2>2. 프로젝트 경험</h2>
-<p>
-대학 시절, 팀 프로젝트에서 프론트엔드 개발을 맡아 사용자 인터페이스를 구현했습니다. React와 TypeScript를 활용하여 모던한 웹 애플리케이션을 개발하였습니다.
-</p>
-
-<h2>3. 기술 스택</h2>
-<p>
-- Frontend: React, TypeScript, Next.js<br>
-- Backend: Node.js, Express<br>
-- Database: MongoDB, PostgreSQL<br>
-- Others: Git, Docker
-</p>
-`
+  questions: [
+    {
+      question: '1. 지원 동기',
+      answer: '저는 어릴 때부터 기술에 대한 호기심이 많았습니다. 특히 웹 개발 분야에서 사용자 경험을 개선하는 것에 큰 관심을 가지고 있었습니다.'
+    },
+    {
+      question: '2. 프로젝트 경험',
+      answer: '대학 시절, 팀 프로젝트에서 프론트엔드 개발을 맡아 사용자 인터페이스를 구현했습니다. React와 TypeScript를 활용하여 모던한 웹 애플리케이션을 개발하였습니다.'
+    },
+    {
+      question: '3. 기술 스택',
+      answer: '- Frontend: React, TypeScript, Next.js\n- Backend: Node.js, Express\n- Database: MongoDB, PostgreSQL\n- Others: Git, Docker'
+    }
+  ]
 };
 
-export default function FeedbackPage({ params }: { params: { id: string } }) {
+export default function FeedbackPage() {
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = async () => {
@@ -86,7 +81,7 @@ export default function FeedbackPage({ params }: { params: { id: string } }) {
         </div>
       </div>
 
-      <FeedbackEditor content={SAMPLE_RESUME.content} />
+      <FeedbackEditor questions={SAMPLE_RESUME.questions} />
     </div>
   );
 }
