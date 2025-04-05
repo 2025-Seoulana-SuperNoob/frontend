@@ -1,17 +1,32 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useWallet } from '@solana/wallet-adapter-react';
 import ResumeForm, { ResumeData } from '@/components/ResumeForm';
+import api from '@/lib/api/axios';
+import { API_ENDPOINTS } from '@/lib/api/endpoints';
 
 export default function NewResumePage() {
   const router = useRouter();
+  const { publicKey } = useWallet();
 
   const handleSubmit = async (data: ResumeData) => {
-    try {
-      // TODO: Solana 프로그램과 연동하여 데이터 저장
-      console.log('Resume data:', data);
+    if (!publicKey) {
+      alert('지갑을 연결해주세요.');
+      return;
+    }
 
-      // 임시로 성공 메시지 표시
+    try {
+      await api.post(API_ENDPOINTS.RESUME.CREATE, {
+        walletAddress: publicKey.toString(),
+        title: data.title,
+        company: data.company,
+        year: data.year,
+        experience: data.experience,
+        position: data.position,
+        questions: data.questions,
+      });
+
       alert('자기소개서가 성공적으로 제출되었습니다!');
       router.push('/resume');
     } catch (error) {
