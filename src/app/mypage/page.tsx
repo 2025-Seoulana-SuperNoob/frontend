@@ -4,10 +4,19 @@ import { useState, useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useRouter } from 'next/navigation';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
+import api from '@/lib/api/axios';
+import { API_ENDPOINTS } from '@/lib/api/endpoints';
+import { Skeleton } from '@/components/Skeleton';
+
+interface UserInfo {
+  walletAddress: string;
+  nickname: string;
+}
 
 export default function MyPage() {
   const { publicKey, disconnect } = useWallet();
   const router = useRouter();
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [nickname, setNickname] = useState('');
   const [copied, setCopied] = useState(false);
 
@@ -17,6 +26,23 @@ export default function MyPage() {
       router.push('/');
     }
   }, [publicKey, router]);
+
+  // 사용자 정보 조회
+  useEffect(() => {
+    const fetchUserInfo = async () => {
+      if (publicKey) {
+        try {
+          const response = await api.get(API_ENDPOINTS.USERS.INFO(publicKey.toString()));
+          setUserInfo(response.data);
+          setNickname(response.data.nickname);
+        } catch (error) {
+          console.error('Error fetching user info:', error);
+        }
+      }
+    };
+
+    fetchUserInfo();
+  }, [publicKey]);
 
   const handleNicknameChange = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,6 +70,39 @@ export default function MyPage() {
   const formatAddress = (address: string) => {
     return `${address.slice(0, 4)}...${address.slice(-4)}`;
   };
+
+  if (!userInfo) {
+    return (
+      <div className="p-4">
+        <Skeleton className="h-8 w-48 mb-6" />
+
+        <div className="bg-white rounded-lg shadow p-6 mb-6">
+          <Skeleton className="h-6 w-32 mb-4" />
+
+          <div className="mb-4">
+            <Skeleton className="h-4 w-24 mb-2" />
+            <div className="flex items-center gap-2">
+              <Skeleton className="flex-1 h-12" />
+              <Skeleton className="h-10 w-16" />
+            </div>
+          </div>
+
+          <div className="mb-6">
+            <Skeleton className="h-4 w-24 mb-2" />
+            <div className="flex gap-2">
+              <Skeleton className="flex-1 h-10" />
+              <Skeleton className="h-10 w-16" />
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4">
