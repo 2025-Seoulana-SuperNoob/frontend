@@ -16,7 +16,7 @@ export default function Home() {
     const handleSignup = async () => {
       if (publicKey) {
         try {
-          await api.post(API_ENDPOINTS.AUTH.SIGNUP, {
+          await api.post(API_ENDPOINTS.USERS.SIGNUP, {
             walletAddress: publicKey.toString(),
           });
           router.push('/resume');
