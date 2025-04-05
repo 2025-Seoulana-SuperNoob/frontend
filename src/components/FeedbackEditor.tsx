@@ -1,4 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+'use client';
+
+import { useRef, useState } from 'react';
 import { BubbleMenu, EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Comment from '@sereneinserenade/tiptap-comment-extension';
@@ -9,6 +11,7 @@ interface CommentData {
   author: string;
   createdAt: Date;
   questionId: string;
+  quotedText?: string;
 }
 
 interface FeedbackEditorProps {
@@ -21,27 +24,9 @@ interface FeedbackEditorProps {
 
 export default function FeedbackEditor({ questions, readOnly = false }: FeedbackEditorProps) {
   const [comments, setComments] = useState<CommentData[]>([]);
-  const [activeCommentId, setActiveCommentId] = useState<string | null>(null);
-  const commentsSectionRef = useRef<HTMLDivElement | null>(null);
-
-  const focusCommentWithActiveId = (id: string) => {
-    if (!commentsSectionRef.current) return;
-
-    const commentInput = commentsSectionRef.current.querySelector<HTMLTextAreaElement>(`textarea#${id}`);
-    if (!commentInput) return;
-
-    commentInput.scrollIntoView({
-      behavior: 'smooth',
-      block: 'center',
-      inline: 'center'
-    });
-    commentInput.focus();
-  };
-
-  useEffect(() => {
-    if (!activeCommentId) return;
-    focusCommentWithActiveId(activeCommentId);
-  }, [activeCommentId]);
+  const [activeComment, setActiveComment] = useState<string | null>(null);
+  const [commentContent, setCommentContent] = useState('');
+  const commentsSectionRef = useRef<HTMLDivElement>(null);
 
   const editor1 = useEditor({
     extensions: [
@@ -50,10 +35,6 @@ export default function FeedbackEditor({ questions, readOnly = false }: Feedback
         HTMLAttributes: {
           class: 'tiptap-comment',
           style: 'background-color: #fff3cd; border-bottom: 2px solid #ffa500;',
-        },
-        onCommentActivated: (commentId) => {
-          setActiveCommentId(commentId);
-          if (commentId) setTimeout(() => focusCommentWithActiveId(commentId));
         },
       }),
     ],
@@ -69,10 +50,6 @@ export default function FeedbackEditor({ questions, readOnly = false }: Feedback
           class: 'tiptap-comment',
           style: 'background-color: #fff3cd; border-bottom: 2px solid #ffa500;',
         },
-        onCommentActivated: (commentId) => {
-          setActiveCommentId(commentId);
-          if (commentId) setTimeout(() => focusCommentWithActiveId(commentId));
-        },
       }),
     ],
     content: questions[1]?.answer || '',
@@ -86,10 +63,6 @@ export default function FeedbackEditor({ questions, readOnly = false }: Feedback
         HTMLAttributes: {
           class: 'tiptap-comment',
           style: 'background-color: #fff3cd; border-bottom: 2px solid #ffa500;',
-        },
-        onCommentActivated: (commentId) => {
-          setActiveCommentId(commentId);
-          if (commentId) setTimeout(() => focusCommentWithActiveId(commentId));
         },
       }),
     ],
@@ -109,17 +82,20 @@ export default function FeedbackEditor({ questions, readOnly = false }: Feedback
       return;
     }
 
+    const selectedText = editor.state.doc.textBetween(from, to);
     const newComment: CommentData = {
       id: `comment-${Date.now()}`,
       content: '',
       author: 'Current User', // TODO: Solana 지갑 주소로 변경
       createdAt: new Date(),
-      questionId
+      questionId,
+      quotedText: selectedText
     };
 
     setComments([...comments, newComment]);
     editor.commands.setComment(newComment.id);
-    setActiveCommentId(newComment.id);
+    setActiveComment(newComment.id);
+    setCommentContent('');
   };
 
   const updateComment = (commentId: string, content: string) => {
@@ -131,9 +107,36 @@ export default function FeedbackEditor({ questions, readOnly = false }: Feedback
     }));
   };
 
-  const saveComment = () => {
-    setActiveCommentId(null);
-    editors.forEach(editor => editor?.commands.focus());
+  const handleEditComment = (commentId: string) => {
+    const comment = comments.find(c => c.id === commentId);
+    if (comment) {
+      setCommentContent(comment.content);
+      setActiveComment(commentId);
+    }
+  };
+
+  const handleDeleteComment = (commentId: string) => {
+    setComments(comments.filter(c => c.id !== commentId));
+    setActiveComment(null);
+  };
+
+  const handleSaveComment = () => {
+    if (activeComment) {
+      if (activeComment.startsWith('comment-')) {
+        updateComment(activeComment, commentContent);
+      } else {
+        const newComment: CommentData = {
+          id: `comment-${Date.now()}`,
+          content: commentContent,
+          author: 'Current User', // TODO: Solana 지갑 주소로 변경
+          createdAt: new Date(),
+          questionId: activeComment
+        };
+        setComments([...comments, newComment]);
+      }
+      setActiveComment(null);
+      setCommentContent('');
+    }
   };
 
   const getCommentsForQuestion = (questionId: string) => {
@@ -167,53 +170,61 @@ export default function FeedbackEditor({ questions, readOnly = false }: Feedback
             <div className="space-y-4">
               {getCommentsForQuestion(`question-${index}`).length ? (
                 getCommentsForQuestion(`question-${index}`).map((comment) => (
-                  <div
-                    key={comment.id}
-                    className={`p-3 rounded-lg border ${
-                      activeCommentId === comment.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
-                    }`}
-                  >
+                  <div key={comment.id} className="border-l-4 border-blue-500 pl-4">
                     <div className="flex justify-between items-start mb-2">
                       <div>
-                        <span className="text-sm font-medium text-gray-700">{comment.author}</span>
-                        <span className="text-xs text-gray-500 ml-2">
+                        <p className="font-medium text-blue-600">{comment.author}</p>
+                        <p className="text-sm text-gray-500">
                           {comment.createdAt.toLocaleDateString()}
-                        </span>
+                        </p>
                       </div>
                       {!readOnly && (
-                        <button
-                          onClick={() => {
-                            editors[index]?.commands.unsetComment(comment.id);
-                            setComments(comments.filter(c => c.id !== comment.id));
-                          }}
-                          className="text-red-500 hover:text-red-700 text-sm"
-                        >
-                          삭제
-                        </button>
+                        <div className="space-x-2">
+                          <button
+                            onClick={() => handleEditComment(comment.id)}
+                            className="text-gray-600 hover:text-gray-800"
+                          >
+                            수정
+                          </button>
+                          <button
+                            onClick={() => handleDeleteComment(comment.id)}
+                            className="text-red-600 hover:text-red-800"
+                          >
+                            삭제
+                          </button>
+                        </div>
                       )}
                     </div>
-                    {!readOnly ? (
-                      <>
+                    {comment.quotedText && (
+                      <blockquote className="border-l-4 border-gray-300 pl-4 my-2 italic text-gray-600">
+                        {comment.quotedText}
+                      </blockquote>
+                    )}
+                    {activeComment === comment.id ? (
+                      <div className="mt-2">
                         <textarea
-                          id={comment.id}
-                          value={comment.content}
-                          onChange={(e) => updateComment(comment.id, e.target.value)}
-                          className="w-full p-2 border rounded-md text-sm"
-                          placeholder="댓글을 입력하세요"
-                          rows={3}
-                          disabled={comment.id !== activeCommentId}
+                          value={commentContent}
+                          onChange={(e) => setCommentContent(e.target.value)}
+                          className="w-full h-32 p-2 border rounded-md mb-2"
+                          placeholder="피드백을 입력하세요..."
                         />
-                        {activeCommentId === comment.id && (
+                        <div className="flex justify-end space-x-2">
                           <button
-                            onClick={saveComment}
-                            className="mt-2 px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
+                            onClick={() => setActiveComment(null)}
+                            className="px-3 py-1 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-md hover:bg-gray-50"
+                          >
+                            취소
+                          </button>
+                          <button
+                            onClick={handleSaveComment}
+                            className="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700"
                           >
                             저장
                           </button>
-                        )}
-                      </>
+                        </div>
+                      </div>
                     ) : (
-                      <p className="text-sm text-gray-600">{comment.content}</p>
+                      <p className="text-gray-700">{comment.content}</p>
                     )}
                   </div>
                 ))
