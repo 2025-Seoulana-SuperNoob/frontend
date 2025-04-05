@@ -1,8 +1,8 @@
 export const API_ENDPOINTS = {
   AUTH: {
-    SIGNUP: '/api/auth/signup',
-    LOGIN: '/api/auth/login',
-    LOGOUT: '/api/auth/logout',
+    SIGNUP: '/api/users/signup',
+    LOGIN: '/api/users/login',
+    LOGOUT: '/api/users/logout',
   },
   RESUME: {
     LIST: '/api/resumes',
