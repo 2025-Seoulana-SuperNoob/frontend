@@ -1,12 +1,23 @@
 'use client';
 
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
+import Image from 'next/image';
 
 export default function Home() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="max-w-[480px] mx-auto px-4 py-12">
         <div className="text-center mb-12">
+          <div className="mb-4">
+            <Image
+              src="/logo.svg"
+              alt="천하제일 자소설 로고"
+              width={64}
+              height={64}
+              className="mx-auto"
+              priority
+            />
+          </div>
           <h1 className="text-4xl font-bold text-gray-800 mb-4">
             천하제일 자소설
           </h1>

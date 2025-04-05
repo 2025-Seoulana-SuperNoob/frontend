@@ -7,8 +7,11 @@ import AppWalletProvider from "@/components/AppWalletProvider";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "SuperNoob",
-  description: "SuperNoob - Your Resume Feedback Platform",
+  title: "천하제일 자소설",
+  description: "함께 성장하는 자기소개서 플랫폼",
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({
