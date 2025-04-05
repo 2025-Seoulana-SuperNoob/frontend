@@ -39,70 +39,13 @@ export default function ResumeForm({ onSubmit }: ResumeFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!publicKey) {
-      setError("지갑 연결이 필요합니다.");
-      return;
-    }
-
-    try {
-      setIsSubmitting(true);
-      setError(null);
-
-      // 1. 트랜잭션 생성
-      const connection = new Connection("https://api.devnet.solana.com");
-      const { blockhash } = await connection.getLatestBlockhash();
-      const transaction = new Transaction().add(
-        SystemProgram.transfer({
-          fromPubkey: publicKey,
-          toPubkey: PROGRAM_ID,
-          lamports: DEPOSIT_AMOUNT * LAMPORTS_PER_SOL,
-        })
-      );
-      transaction.recentBlockhash = blockhash;
-      transaction.feePayer = publicKey;
-
-      // 2. 트랜잭션 서명
-      const signedTx = await signTransaction(transaction);
-      const txHash = await connection.sendRawTransaction(signedTx.serialize());
-
-      // 3. 트랜잭션 확인 대기
-      await connection.confirmTransaction(txHash);
-
-      // 4. 백엔드에 자기소개서와 트랜잭션 정보 전송
-      const response = await api.post(API_ENDPOINTS.RESUME.CREATE, {
-        title,
-        ...basicInfo,
-        questions,
-        walletAddress: publicKey.toBase58(),
-        depositAmount: DEPOSIT_AMOUNT,
-        depositTransaction: txHash,
-      });
-
-      if (response.data) {
-        // 성공 처리
-        onSubmit({
-          title,
-          ...basicInfo,
-          questions
-        });
-        setTitle('');
-        setBasicInfo({
-          company: '',
-          year: new Date().getFullYear(),
-          experience: '신입' as const,
-          position: '',
-        });
-        setQuestions([{ question: '', answer: '' }]);
-        alert("자기소개서가 성공적으로 등록되었습니다.");
-      }
-    } catch (err) {
-      console.error("Error submitting resume:", err);
-      setError("자기소개서 등록에 실패했습니다. 다시 시도해주세요.");
-    } finally {
-      setIsSubmitting(false);
-    }
+    onSubmit({
+      title,
+      ...basicInfo,
+      questions
+    });
   };
 
   const handleBasicInfoChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {

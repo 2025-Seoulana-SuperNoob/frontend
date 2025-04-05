@@ -10,6 +10,7 @@ interface CommentData {
   content: string;
   walletAddress: string;
   createdAt: Date;
+  rewardAmount?: number;
 }
 
 interface FeedbackResponse {
@@ -17,6 +18,7 @@ interface FeedbackResponse {
   content: string;
   walletAddress: string;
   createdAt: string;
+  rewardAmount?: number;
 }
 
 interface FeedbackEditorProps {
@@ -52,6 +54,7 @@ export default function FeedbackEditor({
       const formattedComments = data.map((comment: FeedbackResponse) => ({
         ...comment,
         createdAt: new Date(comment.createdAt),
+        rewardAmount: comment.rewardAmount ? Number(comment.rewardAmount) : undefined,
       }));
       setComments(formattedComments);
     } catch (error) {
@@ -107,29 +110,21 @@ export default function FeedbackEditor({
     if (activeComment && publicKey) {
       try {
         setError(null);
-        const payload = {
-          content: commentContent,
-          walletAddress: publicKey.toBase58()
-        };
-
-        await api.post(
+        const response = await api.post(
           API_ENDPOINTS.RESUME.FEEDBACK.CREATE(resumeId),
-          payload
+          {
+            content: commentContent,
+            walletAddress: publicKey.toBase58(),
+          }
         );
 
-        const newComment: CommentData = {
-          id: `comment-${Date.now()}`,
-          content: commentContent,
-          walletAddress: publicKey.toBase58(),
-          createdAt: new Date(),
-        };
-
-        setComments([...comments, newComment]);
-        setActiveComment(null);
-        setCommentContent('');
-        // Refresh comments after saving
-        fetchComments();
-      } catch {
+        if (response.data) {
+          setComments([...comments, response.data]);
+          setActiveComment(null);
+          setCommentContent('');
+          fetchComments();
+        }
+      } catch (err) {
         setError("피드백 저장에 실패했습니다. 다시 시도해주세요.");
       }
     } else if (!publicKey) {
@@ -205,6 +200,11 @@ export default function FeedbackEditor({
                       <p className="text-sm text-gray-500">
                         {comment.createdAt.toLocaleDateString()}
                       </p>
+                      {comment.rewardAmount && (
+                        <p className="text-sm text-green-600">
+                          보상: {comment.rewardAmount} SOL
+                        </p>
+                      )}
                     </div>
                     {!readOnly && activeComment !== comment.id && (
                       <div className="flex gap-2">
