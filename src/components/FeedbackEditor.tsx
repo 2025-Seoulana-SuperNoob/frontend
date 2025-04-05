@@ -22,7 +22,6 @@ interface FeedbackEditorProps {
 export default function FeedbackEditor({ questions, readOnly = false }: FeedbackEditorProps) {
   const [comments, setComments] = useState<CommentData[]>([]);
   const [activeCommentId, setActiveCommentId] = useState<string | null>(null);
-  const [activeQuestionIndex, setActiveQuestionIndex] = useState<number | null>(null);
   const commentsSectionRef = useRef<HTMLDivElement | null>(null);
 
   const focusCommentWithActiveId = (id: string) => {
@@ -44,29 +43,61 @@ export default function FeedbackEditor({ questions, readOnly = false }: Feedback
     focusCommentWithActiveId(activeCommentId);
   }, [activeCommentId]);
 
-  const createEditor = (content: string, questionId: string) => {
-    return useEditor({
-      extensions: [
-        StarterKit,
-        Comment.configure({
-          HTMLAttributes: {
-            class: 'tiptap-comment'
-          },
-          onCommentActivated: (commentId) => {
-            setActiveCommentId(commentId);
-            setActiveQuestionIndex(parseInt(questionId.split('-')[1]));
-            if (commentId) setTimeout(() => focusCommentWithActiveId(commentId));
-          },
-        }),
-      ],
-      content,
-      editable: !readOnly,
-    });
-  };
+  const editor1 = useEditor({
+    extensions: [
+      StarterKit,
+      Comment.configure({
+        HTMLAttributes: {
+          class: 'tiptap-comment',
+          style: 'background-color: #fff3cd; border-bottom: 2px solid #ffa500;',
+        },
+        onCommentActivated: (commentId) => {
+          setActiveCommentId(commentId);
+          if (commentId) setTimeout(() => focusCommentWithActiveId(commentId));
+        },
+      }),
+    ],
+    content: questions[0]?.answer || '',
+    editable: !readOnly,
+  });
 
-  const editors = questions.map((q, index) =>
-    createEditor(q.answer, `question-${index}`)
-  );
+  const editor2 = useEditor({
+    extensions: [
+      StarterKit,
+      Comment.configure({
+        HTMLAttributes: {
+          class: 'tiptap-comment',
+          style: 'background-color: #fff3cd; border-bottom: 2px solid #ffa500;',
+        },
+        onCommentActivated: (commentId) => {
+          setActiveCommentId(commentId);
+          if (commentId) setTimeout(() => focusCommentWithActiveId(commentId));
+        },
+      }),
+    ],
+    content: questions[1]?.answer || '',
+    editable: !readOnly,
+  });
+
+  const editor3 = useEditor({
+    extensions: [
+      StarterKit,
+      Comment.configure({
+        HTMLAttributes: {
+          class: 'tiptap-comment',
+          style: 'background-color: #fff3cd; border-bottom: 2px solid #ffa500;',
+        },
+        onCommentActivated: (commentId) => {
+          setActiveCommentId(commentId);
+          if (commentId) setTimeout(() => focusCommentWithActiveId(commentId));
+        },
+      }),
+    ],
+    content: questions[2]?.answer || '',
+    editable: !readOnly,
+  });
+
+  const editors = [editor1, editor2, editor3];
 
   const addComment = (questionId: string) => {
     const editor = editors[parseInt(questionId.split('-')[1])];
@@ -102,7 +133,6 @@ export default function FeedbackEditor({ questions, readOnly = false }: Feedback
 
   const saveComment = () => {
     setActiveCommentId(null);
-    setActiveQuestionIndex(null);
     editors.forEach(editor => editor?.commands.focus());
   };
 
