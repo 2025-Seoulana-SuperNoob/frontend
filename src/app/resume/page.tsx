@@ -216,7 +216,7 @@ export default function ResumeListPage() {
                   )}
                   {resume.walletAddress !== publicKey?.toString() && (
                     <Link
-                      href={`/resume/feedback`}
+                      href={`/resume/${resume._id}/feedback`}
                       className="px-3 py-1 text-green-600 hover:text-green-800"
                     >
                       피드백
