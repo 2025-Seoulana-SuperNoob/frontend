@@ -42,7 +42,7 @@ function QuestionEditor({
     content: question,
     editable: false,
     onCreate: ({ editor }) => {
-      // 각 댓글에 대해 하이라이팅 적용
+      // 각 피드백에 대해 하이라이팅 적용
       const questionComments = comments.filter(
         (c) => c.questionIndex === questionIndex
       );
