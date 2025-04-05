@@ -5,7 +5,13 @@ import Link from 'next/link';
 import FeedbackEditor from '@/components/FeedbackEditor';
 
 // 임시 데이터
-const SAMPLE_CONTENT = `
+const SAMPLE_RESUME = {
+  title: '프론트엔드 개발자 지원서',
+  company: '네이버',
+  year: 2024,
+  experience: 'newcomer',
+  position: '프론트엔드 개발자',
+  content: `
 <h2>1. 지원 동기</h2>
 <p>
 저는 어릴 때부터 기술에 대한 호기심이 많았습니다. 특히 웹 개발 분야에서 사용자 경험을 개선하는 것에 큰 관심을 가지고 있었습니다.
@@ -23,7 +29,8 @@ const SAMPLE_CONTENT = `
 - Database: MongoDB, PostgreSQL<br>
 - Others: Git, Docker
 </p>
-`;
+`
+};
 
 export default function FeedbackPage({ params }: { params: { id: string } }) {
   const [isSaving, setIsSaving] = useState(false);
@@ -57,7 +64,29 @@ export default function FeedbackPage({ params }: { params: { id: string } }) {
         </div>
       </div>
 
-      <FeedbackEditor content={SAMPLE_CONTENT} />
+      <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+        <h2 className="text-xl font-bold mb-4">{SAMPLE_RESUME.title}</h2>
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <div>
+            <p className="text-sm text-gray-500">지원 기업</p>
+            <p className="font-medium">{SAMPLE_RESUME.company}</p>
+          </div>
+          <div>
+            <p className="text-sm text-gray-500">지원 연도</p>
+            <p className="font-medium">{SAMPLE_RESUME.year}</p>
+          </div>
+          <div>
+            <p className="text-sm text-gray-500">경력 구분</p>
+            <p className="font-medium">{SAMPLE_RESUME.experience === 'newcomer' ? '신입' : '경력'}</p>
+          </div>
+          <div>
+            <p className="text-sm text-gray-500">지원 직무</p>
+            <p className="font-medium">{SAMPLE_RESUME.position}</p>
+          </div>
+        </div>
+      </div>
+
+      <FeedbackEditor content={SAMPLE_RESUME.content} />
     </div>
   );
 }
