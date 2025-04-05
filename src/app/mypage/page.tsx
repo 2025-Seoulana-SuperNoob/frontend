@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useRouter } from 'next/navigation';
+import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 
 export default function MyPage() {
   const { publicKey, disconnect } = useWallet();
@@ -10,15 +11,17 @@ export default function MyPage() {
   const [nickname, setNickname] = useState('');
   const [copied, setCopied] = useState(false);
 
+  // 지갑 연결이 해제되면 홈페이지로 이동
+  useEffect(() => {
+    if (!publicKey) {
+      router.push('/');
+    }
+  }, [publicKey, router]);
+
   const handleNicknameChange = async (e: React.FormEvent) => {
     e.preventDefault();
     // TODO: 닉네임 변경 API 호출
     console.log('닉네임 변경:', nickname);
-  };
-
-  const handleLogout = () => {
-    disconnect();
-    router.push('/');
   };
 
   const handleDeleteAccount = async () => {
@@ -94,12 +97,7 @@ export default function MyPage() {
         </form>
 
         <div className="space-y-4">
-          <button
-            onClick={handleLogout}
-            className="w-full bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-          >
-            로그아웃
-          </button>
+          <WalletMultiButton />
 
           <button
             onClick={handleDeleteAccount}
