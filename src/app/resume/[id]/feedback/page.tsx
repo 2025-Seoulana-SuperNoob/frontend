@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
-import Link from 'next/link';
-import Skeleton from '@/components/Skeleton';
-import FeedbackEditor from '@/components/FeedbackEditor';
-import { API_ENDPOINTS } from '@/lib/api/endpoints';
-import api from '@/lib/api/axios';
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
+import Link from "next/link";
+import Skeleton from "@/components/Skeleton";
+import FeedbackEditor from "@/components/FeedbackEditor";
+import { API_ENDPOINTS } from "@/lib/api/endpoints";
+import api from "@/lib/api/axios";
 
 interface Resume {
   _id: string;
@@ -23,6 +23,10 @@ interface Feedback {
   content: string;
   walletAddress: string;
   createdAt: string;
+  selections: {
+    from: number;
+    to: number;
+  }[];
 }
 
 export default function FeedbackPage() {
@@ -41,7 +45,7 @@ export default function FeedbackPage() {
         setResume(resumeRes.data);
         setFeedbacks(feedbacksRes.data);
       } catch (error) {
-        console.error('Error fetching data:', error);
+        console.error("Error fetching data:", error);
       } finally {
         setIsLoading(false);
       }
@@ -50,15 +54,24 @@ export default function FeedbackPage() {
     fetchData();
   }, [id]);
 
-  const handleSubmitFeedback = async (content: string, selectedText: string) => {
+  const handleSubmitFeedback = async (content: string) => {
     try {
-      const response = await api.post<Feedback>(API_ENDPOINTS.RESUME.FEEDBACK.CREATE(id as string), {
-        content,
-        selectedText,
-      });
+      const response = await api.post<Feedback>(
+        API_ENDPOINTS.RESUME.FEEDBACK.CREATE(id as string),
+        {
+          content,
+          selections: [
+            {
+              from: 0, // TODO: 실제 선택 위치 정보 추가
+              to: 0, // TODO: 실제 선택 위치 정보 추가
+            },
+          ],
+          walletAddress: "Current User", // TODO: Solana 지갑 주소로 변경
+        }
+      );
       setFeedbacks([response.data, ...feedbacks]);
     } catch (error) {
-      console.error('Error submitting feedback:', error);
+      console.error("Error submitting feedback:", error);
     }
   };
 
@@ -76,7 +89,9 @@ export default function FeedbackPage() {
   if (!resume) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold mb-4">자기소개서를 찾을 수 없습니다</h1>
+        <h1 className="text-2xl font-bold mb-4">
+          자기소개서를 찾을 수 없습니다
+        </h1>
         <Link href="/resume" className="text-blue-500 hover:underline">
           목록으로 돌아가기
         </Link>
@@ -125,7 +140,9 @@ export default function FeedbackPage() {
             {feedbacks.map((feedback) => (
               <div key={feedback._id} className="border rounded-lg p-4">
                 <div className="flex justify-between items-center mb-2">
-                  <p className="text-sm text-gray-600">{feedback.walletAddress}</p>
+                  <p className="text-sm text-gray-600">
+                    {feedback.walletAddress}
+                  </p>
                   <p className="text-sm text-gray-600">
                     {new Date(feedback.createdAt).toLocaleString()}
                   </p>
