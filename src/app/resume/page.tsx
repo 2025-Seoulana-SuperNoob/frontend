@@ -11,6 +11,7 @@ const resumes = [
     questions: 3,
     createdAt: '2024-03-20',
     author: '내가 작성한 자기소개서',
+    nickname: 'crypto_dev',
     isMine: true,
   },
   {
@@ -19,6 +20,7 @@ const resumes = [
     questions: 4,
     createdAt: '2024-03-21',
     author: '다른 사람의 자기소개서',
+    nickname: 'web3_master',
     isMine: false,
   },
 ];
@@ -33,6 +35,13 @@ export default function ResumeListPage() {
     if (filter === 'mine') return resume.isMine;
     return !resume.isMine;
   });
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const days = ['일', '월', '화', '수', '목', '금', '토'];
+    const dayOfWeek = days[date.getDay()];
+    return `${dateString} (${dayOfWeek})`;
+  };
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -91,9 +100,11 @@ export default function ResumeListPage() {
               <div>
                 <h2 className="text-xl font-semibold mb-2">{resume.title}</h2>
                 <p className="text-gray-600">
-                  {resume.questions}개 문항 · {resume.createdAt}
+                  {resume.questions}개 문항 · {formatDate(resume.createdAt)}
                 </p>
-                <p className="text-sm text-gray-500 mt-1">{resume.author}</p>
+                <p className="text-sm text-gray-500 mt-1">
+                  작성자: {resume.nickname}
+                </p>
               </div>
               <div className="space-x-2">
                 <Link
