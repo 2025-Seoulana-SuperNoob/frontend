@@ -7,6 +7,7 @@ import Skeleton from "@/components/Skeleton";
 import FeedbackEditor from "@/components/FeedbackEditor";
 import { API_ENDPOINTS } from "@/lib/api/endpoints";
 import api from "@/lib/api/axios";
+import { useWallet } from "@solana/wallet-adapter-react";
 
 interface Resume {
   _id: string;
@@ -31,6 +32,7 @@ interface Feedback {
 
 export default function FeedbackPage() {
   const { id } = useParams();
+  const { publicKey } = useWallet();
   const [resume, setResume] = useState<Resume | null>(null);
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -54,19 +56,14 @@ export default function FeedbackPage() {
     fetchData();
   }, [id]);
 
-  const handleSubmitFeedback = async (content: string) => {
+  const handleSubmitFeedback = async (content: string, selections: number[]) => {
     try {
       const response = await api.post<Feedback>(
         API_ENDPOINTS.RESUME.FEEDBACK.CREATE(id as string),
         {
           content,
-          selections: [
-            {
-              from: 0, // TODO: 실제 선택 위치 정보 추가
-              to: 0, // TODO: 실제 선택 위치 정보 추가
-            },
-          ],
-          walletAddress: "Current User", // TODO: Solana 지갑 주소로 변경
+          selections,
+          walletAddress: publicKey?.toBase58() || "Unknown",
         }
       );
       setFeedbacks([response.data, ...feedbacks]);
@@ -131,31 +128,6 @@ export default function FeedbackPage() {
         />
       </div>
 
-      <div>
-        <h2 className="text-xl font-bold mb-4">피드백 목록</h2>
-        {feedbacks.length === 0 ? (
-          <p>아직 작성된 피드백이 없습니다.</p>
-        ) : (
-          <div className="space-y-4">
-            {feedbacks.map((feedback) => (
-              <div key={feedback._id} className="border rounded-lg p-4">
-                <div className="flex justify-between items-center mb-2">
-                  <p className="text-sm text-gray-600">
-                    {feedback.walletAddress}
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    {new Date(feedback.createdAt).toLocaleString()}
-                  </p>
-                </div>
-                <div
-                  className="prose max-w-none"
-                  dangerouslySetInnerHTML={{ __html: feedback.content }}
-                />
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
     </div>
   );
 }
