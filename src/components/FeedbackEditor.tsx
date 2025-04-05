@@ -1,14 +1,24 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
+import api from "@/lib/api/axios";
+import { API_ENDPOINTS } from "@/lib/api/endpoints";
 
 interface CommentData {
   id: string;
   content: string;
-  author: string;
+  walletAddress: string;
   createdAt: Date;
-  questionId: string;
+  index: number;
+}
+
+interface FeedbackResponse {
+  id: string;
+  content: string;
+  walletAddress: string;
+  createdAt: string;
+  index: number;
 }
 
 interface FeedbackEditorProps {
@@ -17,13 +27,13 @@ interface FeedbackEditorProps {
     answer: string;
   }[];
   readOnly?: boolean;
-  onSubmit?: (content: string, index: number, walletAddress: string) => Promise<void>;
+  resumeId: string;
 }
 
 export default function FeedbackEditor({
   questions,
   readOnly = false,
-  onSubmit,
+  resumeId,
 }: FeedbackEditorProps) {
   const { publicKey } = useWallet();
   const [comments, setComments] = useState<CommentData[]>([]);
@@ -31,31 +41,50 @@ export default function FeedbackEditor({
   const [commentContent, setCommentContent] = useState("");
   const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const commentsSectionRef = useRef<HTMLDivElement>(null);
 
-  const addComment = (questionId: string) => {
+  const fetchComments = async () => {
+    try {
+      setIsLoading(true);
+      const { data } = await api.get<FeedbackResponse[]>(
+        API_ENDPOINTS.RESUME.FEEDBACK.LIST(resumeId)
+      );
+      // Convert string dates to Date objects
+      const formattedComments = data.map((comment: FeedbackResponse) => ({
+        ...comment,
+        createdAt: new Date(comment.createdAt),
+      }));
+      setComments(formattedComments);
+    } catch (error) {
+      setError("피드백을 불러오는데 실패했습니다.");
+      console.error("Error fetching comments:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchComments();
+  }, [resumeId, activeQuestionIndex]);
+
+  const addComment = (index: number) => {
+    if (!publicKey) {
+      setError("지갑 연결이 필요합니다.");
+      return;
+    }
+
     const newComment: CommentData = {
       id: `comment-${Date.now()}`,
       content: "",
-      author: publicKey?.toBase58() || "Unknown",
+      walletAddress: publicKey.toBase58(),
       createdAt: new Date(),
-      questionId,
+      index,
     };
 
     setComments([...comments, newComment]);
     setActiveComment(newComment.id);
     setCommentContent("");
-  };
-
-  const updateComment = (commentId: string, content: string) => {
-    setComments(
-      comments.map((comment) => {
-        if (comment.id === commentId) {
-          return { ...comment, content };
-        }
-        return comment;
-      })
-    );
   };
 
   const handleEditComment = (commentId: string) => {
@@ -75,34 +104,30 @@ export default function FeedbackEditor({
     if (activeComment && publicKey) {
       try {
         setError(null);
-        if (activeComment.startsWith('comment-')) {
-          updateComment(activeComment, commentContent);
-          if (onSubmit) {
-            await onSubmit(
-              commentContent,
-              activeQuestionIndex,
-              publicKey.toBase58()
-            );
-          }
-        } else {
-          const newComment: CommentData = {
-            id: `comment-${Date.now()}`,
-            content: commentContent,
-            author: publicKey.toBase58(),
-            createdAt: new Date(),
-            questionId: activeComment,
-          };
-          setComments([...comments, newComment]);
-          if (onSubmit) {
-            await onSubmit(
-              commentContent,
-              activeQuestionIndex,
-              publicKey.toBase58()
-            );
-          }
-        }
+        const payload = {
+          content: commentContent,
+          index: activeQuestionIndex,
+          walletAddress: publicKey.toBase58()
+        };
+
+        await api.post(
+          API_ENDPOINTS.RESUME.FEEDBACK.CREATE(resumeId),
+          payload
+        );
+
+        const newComment: CommentData = {
+          id: `comment-${Date.now()}`,
+          content: commentContent,
+          walletAddress: publicKey.toBase58(),
+          createdAt: new Date(),
+          index: activeQuestionIndex,
+        };
+
+        setComments([...comments, newComment]);
         setActiveComment(null);
         setCommentContent('');
+        // Refresh comments after saving
+        fetchComments();
       } catch {
         setError("피드백 저장에 실패했습니다. 다시 시도해주세요.");
       }
@@ -111,8 +136,8 @@ export default function FeedbackEditor({
     }
   };
 
-  const getCommentsForQuestion = (questionId: string) => {
-    return comments.filter((comment) => comment.questionId === questionId);
+  const getCommentsForQuestion = (index: number) => {
+    return comments.filter((comment) => comment.index === index);
   };
 
   return (
@@ -156,7 +181,7 @@ export default function FeedbackEditor({
           <h3 className="text-lg font-semibold">피드백 목록</h3>
           {!readOnly && (
             <button
-              onClick={() => addComment(`question-${activeQuestionIndex}`)}
+              onClick={() => addComment(activeQuestionIndex)}
               className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
             >
               피드백 추가
@@ -164,8 +189,12 @@ export default function FeedbackEditor({
           )}
         </div>
         <div className="space-y-4">
-          {getCommentsForQuestion(`question-${activeQuestionIndex}`).length ? (
-            getCommentsForQuestion(`question-${activeQuestionIndex}`).map(
+          {isLoading ? (
+            <div key="loading" className="text-center text-gray-500 py-4">
+              피드백을 불러오는 중...
+            </div>
+          ) : getCommentsForQuestion(activeQuestionIndex).length ? (
+            getCommentsForQuestion(activeQuestionIndex).map(
               (comment) => (
                 <div
                   key={comment.id}
@@ -174,8 +203,8 @@ export default function FeedbackEditor({
                   <div className="flex flex-col gap-2">
                     <div className="flex items-start justify-between">
                       <div>
-                        <p className="font-medium text-blue-600 truncate max-w-[150px]" title={comment.author}>
-                          {comment.author.length > 8 ? `${comment.author.slice(0, 8)}...` : comment.author}
+                        <p className="font-medium text-blue-600 truncate max-w-[150px]" title={comment.walletAddress}>
+                          {comment.walletAddress.length > 8 ? `${comment.walletAddress.slice(0, 8)}...` : comment.walletAddress}
                         </p>
                         <p className="text-sm text-gray-500">
                           {comment.createdAt.toLocaleDateString()}
@@ -237,7 +266,7 @@ export default function FeedbackEditor({
               )
             )
           ) : (
-            <div className="text-center text-gray-500 py-4">
+            <div key="no-comments" className="text-center text-gray-500 py-4">
               아직 작성된 피드백이 없습니다.
             </div>
           )}

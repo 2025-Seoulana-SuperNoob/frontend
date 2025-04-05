@@ -122,6 +122,7 @@ export default function FeedbackPage() {
         <FeedbackEditor
           questions={resume.questions}
           onSubmit={handleSubmitFeedback}
+          resumeId={resume._id}
         />
       </div>
 
